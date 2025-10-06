@@ -1,18 +1,38 @@
-import type { RouteRecordRaw } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    component: () => import('layouts/MainLayout.vue'),
-    children: [{ path: '', component: () => import('pages/IndexPage.vue') }],
+    redirect: '/chat'
   },
-
-  // Always leave this as last one,
-  // but you can also remove it
+  {
+    path: '/auth',
+    name: 'auth',
+    component: () => import('pages/AuthPage.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
+    path: '/chat',
+    component: () => import('layouts/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        name: 'chat',
+        component: () => import('pages/ChatPage.vue')
+      },
+      {
+        path: 'channel/:id',
+        name: 'channel',
+        component: () => import('pages/ChatPage.vue')
+      }
+    ]
+  },
+  // 404 - Not found
   {
     path: '/:catchAll(.*)*',
-    component: () => import('pages/ErrorNotFound.vue'),
-  },
-];
+    component: () => import('pages/ErrorNotFound.vue')
+  }
+]
 
-export default routes;
+export default routes
