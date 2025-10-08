@@ -1,537 +1,521 @@
 <template>
-  <q-layout view="hHh LpR fFf" class="bg-grey-10">
-    <!-- Modern Header with Glass Effect -->
-    <q-header elevated class="bg-dark q-py-xs" style="backdrop-filter: blur(10px);">
+  <q-layout view="hHh LpR fFf">
+    <!-- Header -->
+    <q-header elevated class="bg-primary text-white">
       <q-toolbar>
         <q-btn
           flat
           dense
           round
           icon="menu"
-          @click="leftDrawerOpen = !leftDrawerOpen"
-          class="lt-md"
+          @click="toggleLeftDrawer"
         />
-        
-        <q-toolbar-title class="text-weight-bold row items-center">
-          <q-icon name="tag" size="sm" class="q-mr-sm" />
-          <div class="ellipsis">{{ currentChannel?.name || 'Vyber kanál' }}</div>
+
+        <q-toolbar-title class="row items-center no-wrap">
+          <q-icon name="tag" size="24px" class="q-mr-sm" />
+          <span class="ellipsis">{{ currentChannelName }}</span>
+          <q-badge 
+            v-if="isCurrentChannelPrivate" 
+            color="amber" 
+            label="Súkromný" 
+            class="q-ml-sm"
+          />
         </q-toolbar-title>
 
-        <!-- Typing Indicator -->
-        <q-slide-transition>
-          <div v-show="typingUsers.length > 0" class="text-caption text-grey-5 q-mr-md">
-            <q-icon name="edit" size="xs" class="q-mr-xs" />
-            {{ typingIndicatorText }}
-          </div>
-        </q-slide-transition>
+        <!-- Typing Indicator Component will go here -->
+        <typing-indicator 
+          v-if="typingUsers.length > 0"
+          :users="typingUsers" 
+        />
 
-        <!-- Dark Mode Toggle -->
-        <q-btn
-          flat
-          dense
-          round
-          :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"
-          @click="toggleDarkMode"
-        >
-          <q-tooltip>{{ $q.dark.isActive ? 'Svetlý režim' : 'Tmavý režim' }}</q-tooltip>
-        </q-btn>
+        <q-space />
 
-        <!-- User Menu -->
-        <q-btn-dropdown flat round dense icon="person" class="q-ml-sm">
-          <q-list style="min-width: 220px">
-            <q-item-label header class="text-weight-bold">
-              {{ currentUser?.nickName }}
-            </q-item-label>
-            
-            <q-separator />
+        <!-- User Status Menu Component -->
+        <user-status-menu 
+          v-if="currentUser"
+          :current-user="currentUser"
+          :user-status="userStatus"
+          @status-changed="handleStatusChange"
+          @logout="handleLogout"
+        />
 
-            <q-item-label header class="text-caption text-grey-7">Status</q-item-label>
-            
-            <q-item
-              clickable
-              v-close-popup
-              @click="setStatus('online')"
-              :active="userStatus === 'online'"
-              active-class="bg-positive text-white"
-            >
-              <q-item-section avatar>
-                <q-icon name="circle" color="positive" size="xs" />
-              </q-item-section>
-              <q-item-section>Online</q-item-section>
-            </q-item>
-            
-            <q-item
-              clickable
-              v-close-popup
-              @click="setStatus('dnd')"
-              :active="userStatus === 'dnd'"
-              active-class="bg-warning text-white"
-            >
-              <q-item-section avatar>
-                <q-icon name="do_not_disturb_on" color="warning" size="xs" />
-              </q-item-section>
-              <q-item-section>DND</q-item-section>
-            </q-item>
-            
-            <q-item
-              clickable
-              v-close-popup
-              @click="setStatus('offline')"
-              :active="userStatus === 'offline'"
-              active-class="bg-grey text-white"
-            >
-              <q-item-section avatar>
-                <q-icon name="circle" color="grey" size="xs" />
-              </q-item-section>
-              <q-item-section>Offline</q-item-section>
-            </q-item>
-
-            <q-separator />
-
-            <q-item tag="label" v-ripple>
-              <q-item-section>
-                <q-item-label>Len @mention notifikácie</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-toggle v-model="mentionOnlyNotifications" color="primary" />
-              </q-item-section>
-            </q-item>
-
-            <q-separator />
-
-            <q-item clickable v-close-popup @click="handleLogout" v-ripple>
-              <q-item-section avatar>
-                <q-icon name="logout" color="negative" />
-              </q-item-section>
-              <q-item-section>Odhlásiť sa</q-item-section>
-            </q-item>
-          </q-list>
-        </q-btn-dropdown>
-
+        <!-- Members Toggle -->
         <q-btn
           flat
           dense
           round
           icon="group"
-          @click="rightDrawerOpen = !rightDrawerOpen"
-          class="q-ml-xs"
+          @click="toggleRightDrawer"
         >
-          <q-badge v-if="members.length > 0" color="primary" floating>
-            {{ members.length }}
+          <q-badge v-if="onlineMembers > 0" color="positive" floating>
+            {{ onlineMembers }}
           </q-badge>
-          <q-tooltip>Členovia</q-tooltip>
+          <q-tooltip>Členovia ({{ onlineMembers }}/{{ totalMembers }})</q-tooltip>
         </q-btn>
       </q-toolbar>
     </q-header>
 
-    <!-- Left Drawer - Channels (Responsive) -->
+    <!-- Left Drawer - Channels -->
     <q-drawer
       v-model="leftDrawerOpen"
       show-if-above
-      :width="280"
-      :breakpoint="1024"
       bordered
-      class="column no-wrap"
+      :width="300"
     >
-      <!-- Drawer Header -->
-      <div class="q-pa-md bg-primary text-white column">
-        <div class="text-h5 text-weight-bold row items-center">
-          <q-icon name="forum" size="sm" class="q-mr-sm" />
-          ChatFlow
-        </div>
-        <div class="text-caption">{{ channels.length }} kanálov</div>
-      </div>
-
-      <q-scroll-area class="col">
-        <div class="q-pa-md">
-          <!-- Create Channel Button with Animation -->
-          <q-btn
-            outline
-            color="primary"
-            icon="add"
-            label="Nový kanál"
-            class="full-width q-mb-md"
-            @click="showCreateChannelDialog = true"
-            unelevated
-          >
-            <q-tooltip>Vytvor alebo sa pripoj do kanála</q-tooltip>
-          </q-btn>
-
-          <q-separator class="q-my-md" />
-
-          <!-- Channels List with Animations -->
-          <q-list>
-            <q-item-label header class="text-uppercase text-weight-bold text-caption">
-              <q-icon name="tag" size="xs" class="q-mr-xs" />
-              Kanály
-            </q-item-label>
-
-            <transition-group name="list">
-              <q-item
-                v-for="channel in channels"
-                :key="channel.id"
-                clickable
-                v-ripple
-                :active="currentChannel?.id === channel.id"
-                active-class="bg-primary text-white"
-                @click="selectChannel(channel)"
-                class="rounded-borders q-mb-xs transition"
-              >
-                <q-item-section avatar>
-                  <q-avatar size="32px" :color="channel.isPrivate ? 'orange' : 'primary'" text-color="white">
-                    <q-icon :name="channel.isPrivate ? 'lock' : 'tag'" size="xs" />
-                  </q-avatar>
-                </q-item-section>
-                
-                <q-item-section>
-                  <q-item-label class="text-weight-medium">
-                    {{ channel.name }}
-                  </q-item-label>
-                  <q-item-label caption v-if="channel.unreadCount && channel.unreadCount > 0">
-                    <q-badge color="warning" :label="channel.unreadCount" />
-                    {{ channel.unreadCount === 1 ? 'nová správa' : 'nových správ' }}
-                  </q-item-label>
-                </q-item-section>
-
-                <q-item-section side v-if="channel.isNewInvite">
-                  <q-badge color="warning" label="Nový!" />
-                </q-item-section>
-
-                <!-- Channel Actions -->
-                <q-item-section side v-if="currentChannel?.id === channel.id">
-                  <q-btn
-                    flat
-                    dense
-                    round
-                    size="sm"
-                    icon="more_vert"
-                    @click.stop
-                  >
-                    <q-menu>
-                      <q-list dense style="min-width: 150px">
-                        <q-item clickable v-close-popup>
-                          <q-item-section avatar>
-                            <q-icon name="exit_to_app" size="xs" />
-                          </q-item-section>
-                          <q-item-section>Opustiť</q-item-section>
-                        </q-item>
-                        <q-item
-                          v-if="channel.isAdmin"
-                          clickable
-                          v-close-popup
-                          class="text-negative"
-                        >
-                          <q-item-section avatar>
-                            <q-icon name="delete" size="xs" />
-                          </q-item-section>
-                          <q-item-section>Zmazať</q-item-section>
-                        </q-item>
-                      </q-list>
-                    </q-menu>
-                  </q-btn>
-                </q-item-section>
-              </q-item>
-            </transition-group>
-          </q-list>
-        </div>
-      </q-scroll-area>
+      <channel-list
+        :channels="channels"
+        :current-channel-id="currentChannelId"
+        @channel-selected="selectChannel"
+        @channel-created="createChannel"
+        @channel-left="leaveChannel"
+        @channel-deleted="deleteChannel"
+      />
     </q-drawer>
 
-    <!-- Right Drawer - Members (Responsive) -->
+    <!-- Right Drawer - Members -->
     <q-drawer
       v-model="rightDrawerOpen"
       side="right"
-      :width="280"
-      :breakpoint="768"
       bordered
-      class="column no-wrap"
+      :width="300"
     >
-      <!-- Members Header -->
-      <div class="q-pa-md bg-dark text-white column">
-        <div class="text-h6 text-weight-bold row items-center">
-          <q-icon name="group" size="sm" class="q-mr-sm" />
-          Členovia
-        </div>
-        <div class="text-caption">{{ members.length }} online</div>
-      </div>
-
-      <q-scroll-area class="col">
-        <div class="q-pa-md">
-          <q-list>
-            <transition-group name="list">
-              <q-item
-                v-for="member in members"
-                :key="member.id"
-                class="rounded-borders q-mb-xs"
-                v-ripple
-                clickable
-              >
-                <q-item-section avatar>
-                  <q-avatar :color="getStatusColor(member.status)" size="40px" text-color="white">
-                    <div class="text-weight-bold">
-                      {{ member.nickName.charAt(0).toUpperCase() }}
-                    </div>
-                    <q-badge
-                      v-if="member.status === 'online'"
-                      color="positive"
-                      floating
-                      rounded
-                    />
-                    <q-badge
-                      v-else-if="member.status === 'dnd'"
-                      color="warning"
-                      floating
-                      rounded
-                    />
-                  </q-avatar>
-                </q-item-section>
-                
-                <q-item-section>
-                  <q-item-label class="text-weight-medium">
-                    {{ member.nickName }}
-                  </q-item-label>
-                  <q-item-label caption>
-                    {{ member.firstName }} {{ member.lastName }}
-                  </q-item-label>
-                </q-item-section>
-
-                <q-item-section side>
-                  <q-icon
-                    :name="getStatusIcon(member.status)"
-                    :color="getStatusColor(member.status)"
-                    size="xs"
-                  />
-                </q-item-section>
-              </q-item>
-            </transition-group>
-          </q-list>
-        </div>
-      </q-scroll-area>
+      <member-list
+        :members="members"
+        :is-admin="isChannelAdmin"
+        @member-kicked="kickMember"
+        @member-mentioned="mentionUser"
+      />
     </q-drawer>
 
-    <!-- Page Content -->
+    <!-- Page Container -->
+    <!-- Page Container -->
     <q-page-container>
-      <router-view />
+      <router-view 
+        v-if="currentChannelId !== null"
+        :channel-id="currentChannelId"
+        :current-user="currentUser"
+        :members="members"
+        @message-sent="handleMessageSent"
+        @command-executed="handleCommand"
+      />
+      
+      <!-- Loading state -->
+      <q-page v-else class="flex flex-center">
+        <q-spinner color="primary" size="3em" />
+        <div class="q-mt-md text-grey-7">Načítavam kanály...</div>
+      </q-page>
     </q-page-container>
-
-    <!-- Create Channel Dialog with Animation -->
-    <q-dialog v-model="showCreateChannelDialog" transition-show="scale" transition-hide="scale">
-      <q-card style="min-width: 400px; max-width: 500px" class="q-pa-md">
-        <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6 text-weight-bold">Vytvoriť nový kanál</div>
-          <q-space />
-          <q-btn icon="close" flat round dense v-close-popup />
-        </q-card-section>
-
-        <q-card-section>
-          <q-input
-            v-model="newChannelName"
-            label="Názov kanála"
-            outlined
-            dense
-            hint="Použitie: /join channelName [private]"
-            :rules="[
-              val => !!val || 'Názov je povinný',
-              val => val.length >= 3 || 'Minimálne 3 znaky',
-              val => /^[a-zA-Z0-9_-]+$/.test(val) || 'Len písmená, čísla, _ a -'
-            ]"
-            class="q-mb-md"
-          >
-            <template v-slot:prepend>
-              <q-icon name="tag" />
-            </template>
-          </q-input>
-
-          <q-toggle
-            v-model="newChannelIsPrivate"
-            label="Súkromný kanál (len na pozvanie)"
-            color="primary"
-            left-label
-            class="full-width"
-          />
-
-          <q-banner v-if="newChannelIsPrivate" dense rounded class="bg-orange-1 text-orange-9 q-mt-md">
-            <template v-slot:avatar>
-              <q-icon name="info" color="orange" />
-            </template>
-            Len ty môžeš pozývať členov do súkromného kanála
-          </q-banner>
-        </q-card-section>
-
-        <q-card-actions align="right" class="q-px-md q-pb-md">
-          <q-btn flat label="Zrušiť" color="grey-7" v-close-popup />
-          <q-btn
-            unelevated
-            label="Vytvoriť kanál"
-            color="primary"
-            @click="createChannel"
-            icon-right="add"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </q-layout>
 </template>
 
-<script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useQuasar } from 'quasar'
-
-const router = useRouter()
-const $q = useQuasar()
-
-// State
-const leftDrawerOpen = ref(true)
-const rightDrawerOpen = ref(false)
-const showCreateChannelDialog = ref(false)
-const newChannelName = ref('')
-const newChannelIsPrivate = ref(false)
-const userStatus = ref<'online' | 'dnd' | 'offline'>('online')
-const mentionOnlyNotifications = ref(false)
-
-// Enable dark mode by default
-if ($q.dark) {
-  $q.dark.set(true)
+<script lang="ts">
+import { defineComponent } from 'vue'
+import TypingIndicatorChip from '../components/TypingIndicator.vue'
+import UserStatusMenu from '../components/UserStatus.vue'
+import ChannelList from '../components/ChannelList.vue'
+import MemberList from '../components/MemberList.vue'
+import { Storage } from '../utils/storage'
+import type { Channel, User, UserStatus, TypingIndicator as TypingIndicatorType } from '../types'
+type ChannelWithMeta = Channel & {
+  lastMessage?: string
 }
 
-const currentUser = ref({
-  id: 1,
-  nickName: 'JanNovak',
-  firstName: 'Ján',
-  lastName: 'Novák',
-  email: 'jan@example.com'
+export default defineComponent({
+  name: 'MainLayout',
+  components: {
+  TypingIndicator: TypingIndicatorChip,
+    UserStatusMenu,
+    ChannelList,
+    MemberList
+  },
+  data() {
+    return {
+      leftDrawerOpen: true,
+      rightDrawerOpen: false,
+      currentUser: null as User | null,
+      userStatus: 'online' as UserStatus,
+      channels: [] as ChannelWithMeta[],
+      currentChannelId: null as number | null,
+    members: [] as User[],
+    typingUsers: [] as TypingIndicatorType[],
+    mentionOnlyNotifications: false,
+    storageEventHandler: null as ((event: StorageEvent) => void) | null,
+    visibilityChangeHandler: null as (() => void) | null
+    }
+  },
+  computed: {
+    currentChannel(): ChannelWithMeta | null {
+      return this.channels.find(channel => channel.id === this.currentChannelId) || null
+    },
+    currentChannelName(): string {
+      return this.currentChannel?.name || 'Vyber kanál'
+    },
+    isCurrentChannelPrivate(): boolean {
+      return this.currentChannel?.isPrivate || false
+    },
+    isChannelAdmin(): boolean {
+      if (!this.currentUser) {
+        return false
+      }
+      return this.currentChannel?.adminId === this.currentUser.id
+    },
+    onlineMembers(): number {
+      return this.members.filter(member => member.status === 'online').length
+    },
+    totalMembers(): number {
+      return this.members.length
+    }
+  },
+  watch: {
+    currentChannelId(newId: number | null) {
+      if (newId) {
+        this.loadChannelData(newId)
+      }
+    }
+  },
+  created() {
+    this.initializeApp()
+  },
+  mounted() {
+    this.setupEventListeners()
+    this.loadInitialData()
+  },
+  beforeUnmount() {
+    this.cleanupEventListeners()
+  },
+  methods: {
+    initializeApp(): void {
+      const existingUser = Storage.getCurrentUser()
+      if (existingUser) {
+        this.currentUser = existingUser
+        this.userStatus = existingUser.status
+      } else {
+        const defaultUser: User = {
+          id: 1,
+          nickName: 'TestUser',
+          firstName: 'Test',
+          lastName: 'User',
+          email: 'test@example.com',
+          status: 'online'
+        }
+        Storage.setCurrentUser(defaultUser)
+        this.currentUser = defaultUser
+      }
+  const settings = Storage.getSettings()
+  this.mentionOnlyNotifications = settings.mentionOnlyNotifications
+    },
+    loadInitialData(): void {
+      this.channels = Storage.getChannels() as ChannelWithMeta[]
+      if (this.channels.length === 0) {
+        const defaultChannels: ChannelWithMeta[] = [
+          {
+            id: 1,
+            name: 'general',
+            isPrivate: false,
+            adminId: this.currentUser?.id || 1,
+            createdAt: new Date(),
+            lastActivityAt: new Date(),
+            unreadCount: 0
+          },
+          {
+            id: 2,
+            name: 'random',
+            isPrivate: false,
+            adminId: this.currentUser?.id || 1,
+            createdAt: new Date(),
+            lastActivityAt: new Date(),
+            unreadCount: 0
+          }
+        ]
+        Storage.setChannels(defaultChannels)
+        this.channels = defaultChannels
+      }
+      if (this.channels.length > 0 && !this.currentChannelId) {
+        const firstChannel = this.channels[0]
+        if (firstChannel) {
+          this.selectChannel(firstChannel)
+        }
+      }
+      this.loadChannelMembers()
+    },
+    loadChannelData(channelId: number): void {
+      this.$emit('channel-changed', channelId)
+      this.loadChannelMembers(channelId)
+    },
+    loadChannelMembers(channelId?: number | null): void {
+      const id = channelId ?? this.currentChannelId
+      if (!id) {
+        return
+      }
+      const storedMembers = Storage.getMembers(id)
+      if (storedMembers.length > 0) {
+        this.members = storedMembers
+      } else {
+        const defaultMembers: User[] = [
+          {
+            id: this.currentUser?.id || 1,
+            nickName: this.currentUser?.nickName || 'TestUser',
+            firstName: this.currentUser?.firstName || 'Test',
+            lastName: this.currentUser?.lastName || 'User',
+            email: this.currentUser?.email || 'test@example.com',
+            status: this.currentUser?.status || 'online'
+          },
+          {
+            id: 2,
+            nickName: 'Eva',
+            firstName: 'Eva',
+            lastName: 'Nováková',
+            email: 'eva@example.com',
+            status: 'online'
+          },
+          {
+            id: 3,
+            nickName: 'Peter',
+            firstName: 'Peter',
+            lastName: 'Horváth',
+            email: 'peter@example.com',
+            status: 'dnd'
+          }
+        ]
+        Storage.setMembers(id, defaultMembers)
+        this.members = defaultMembers
+      }
+    },
+    setupEventListeners(): void {
+      this.storageEventHandler = this.handleStorageChange.bind(this)
+      this.visibilityChangeHandler = this.handleVisibilityChange.bind(this)
+      window.addEventListener('storage', this.storageEventHandler)
+      document.addEventListener('visibilitychange', this.visibilityChangeHandler)
+    },
+    cleanupEventListeners(): void {
+      if (this.storageEventHandler) {
+        window.removeEventListener('storage', this.storageEventHandler)
+        this.storageEventHandler = null
+      }
+      if (this.visibilityChangeHandler) {
+        document.removeEventListener('visibilitychange', this.visibilityChangeHandler)
+        this.visibilityChangeHandler = null
+      }
+    },
+    handleStorageChange(event: StorageEvent): void {
+      if (event.key === 'channels') {
+        this.channels = JSON.parse(event.newValue || '[]')
+      }
+      if (event.key === 'currentUser') {
+        this.currentUser = JSON.parse(event.newValue || 'null')
+      }
+    },
+    handleVisibilityChange(): void {
+      if (!document.hidden) {
+        this.markChannelAsRead(this.currentChannelId)
+      }
+    },
+    toggleLeftDrawer(): void {
+      this.leftDrawerOpen = !this.leftDrawerOpen
+    },
+    toggleRightDrawer(): void {
+      this.rightDrawerOpen = !this.rightDrawerOpen
+    },
+    selectChannel(channel: ChannelWithMeta): void {
+      this.currentChannelId = channel.id
+      this.markChannelAsRead(channel.id)
+      if (this.$q.screen.lt.md) {
+        this.leftDrawerOpen = false
+      }
+      localStorage.setItem('currentChannelId', String(channel.id))
+    },
+    markChannelAsRead(channelId: number | null): void {
+      if (!channelId) {
+        return
+      }
+      const selected = this.channels.find(channel => channel.id === channelId)
+      if (selected) {
+        selected.unreadCount = 0
+        selected.isNewInvite = false
+        Storage.setChannels(this.channels)
+      }
+    },
+    createChannel(channelData: { name: string; isPrivate: boolean }): void {
+      if (!this.currentUser) {
+        return
+      }
+      const newChannel: ChannelWithMeta = {
+        id: Date.now(),
+        name: channelData.name,
+        isPrivate: channelData.isPrivate,
+        adminId: this.currentUser.id,
+        createdAt: new Date(),
+        lastActivityAt: new Date(),
+        unreadCount: 0
+      }
+      this.channels.push(newChannel)
+      Storage.setChannels(this.channels)
+      this.$q.notify({
+        type: 'positive',
+        message: `Kanál #${newChannel.name} bol vytvorený`,
+        position: 'top'
+      })
+      this.selectChannel(newChannel)
+    },
+    leaveChannel(channel: ChannelWithMeta): void {
+      const index = this.channels.findIndex(entry => entry.id === channel.id)
+      if (index > -1) {
+        this.channels.splice(index, 1)
+        Storage.setChannels(this.channels)
+        if (this.currentChannelId === channel.id) {
+          this.currentChannelId = this.channels[0]?.id || null
+        }
+        this.$q.notify({
+          type: 'info',
+          message: `Opustil si kanál #${channel.name}`,
+          position: 'top'
+        })
+      }
+    },
+    deleteChannel(channel: ChannelWithMeta | null): void {
+      if (!channel || !this.currentUser) {
+        return
+      }
+      if (channel.adminId !== this.currentUser.id) {
+        this.$q.notify({
+          type: 'negative',
+          message: 'Nemáš oprávnenie zmazať tento kanál',
+          position: 'top'
+        })
+        return
+      }
+      this.leaveChannel(channel)
+    },
+    kickMember(member: User): void {
+      const index = this.members.findIndex(entry => entry.id === member.id)
+      if (index > -1) {
+        this.members.splice(index, 1)
+        if (this.currentChannelId) {
+          Storage.setMembers(this.currentChannelId, this.members)
+        }
+        this.$q.notify({
+          type: 'info',
+          message: `${member.nickName} bol vyhodený z kanála`,
+          position: 'top'
+        })
+      }
+    },
+    mentionUser(member: User): void {
+      this.$emit('mention-user', member.nickName)
+      this.rightDrawerOpen = false
+    },
+    handleStatusChange(newStatus: UserStatus): void {
+      if (!this.currentUser) {
+        return
+      }
+      this.userStatus = newStatus
+      this.currentUser.status = newStatus
+      Storage.setCurrentUser(this.currentUser)
+      this.$q.notify({
+        type: 'info',
+        message: `Status zmenený na ${newStatus}`,
+        position: 'top'
+      })
+    },
+    handleLogout(): void {
+      Storage.clearAll()
+      this.$router.push('/auth')
+    },
+    handleMessageSent(message: { channelId: number }): void {
+      const channel = this.channels.find(entry => entry.id === message.channelId)
+      if (channel) {
+        channel.lastActivityAt = new Date()
+        Storage.setChannels(this.channels)
+      }
+    },
+    handleCommand(command: string): void {
+      const [cmd, ...args] = command.split(' ')
+      switch (cmd) {
+        case '/join':
+          this.handleJoinCommand(args)
+          break
+        case '/invite':
+          this.handleInviteCommand(args)
+          break
+        case '/kick':
+          this.handleKickCommand(args)
+          break
+        case '/cancel':
+          if (this.currentChannel) {
+            this.leaveChannel(this.currentChannel)
+          }
+          break
+        case '/quit':
+          this.deleteChannel(this.currentChannel)
+          break
+        case '/list':
+          this.rightDrawerOpen = true
+          break
+        default:
+          this.$q.notify({
+            type: 'negative',
+            message: `Neznámy príkaz: ${cmd}`,
+            position: 'top'
+          })
+      }
+    },
+    handleJoinCommand(args: string[]): void {
+      const [channelName, privacyFlag] = args
+      if (!channelName) {
+        this.$q.notify({
+          type: 'warning',
+          message: 'Použitie: /join channelName [private]',
+          position: 'top'
+        })
+        return
+      }
+      const existing = this.channels.find(channel => channel.name === channelName)
+      if (existing) {
+        this.selectChannel(existing)
+      } else {
+        this.createChannel({
+          name: channelName,
+          isPrivate: privacyFlag === 'private'
+        })
+      }
+    },
+    handleInviteCommand(args: string[]): void {
+      const [nickName] = args
+      if (!nickName || !nickName.startsWith('@')) {
+        this.$q.notify({
+          type: 'warning',
+          message: 'Použitie: /invite @nickName',
+          position: 'top'
+        })
+        return
+      }
+      this.$q.notify({
+        type: 'positive',
+        message: `Používateľ ${nickName} bol pozvaný`,
+        position: 'top'
+      })
+    },
+    handleKickCommand(args: string[]): void {
+      const [nickName] = args
+      if (!nickName || !nickName.startsWith('@')) {
+        this.$q.notify({
+          type: 'warning',
+          message: 'Použitie: /kick @nickName',
+          position: 'top'
+        })
+        return
+      }
+      const member = this.members.find(entry => `@${entry.nickName}` === nickName)
+      if (member) {
+        this.kickMember(member)
+      }
+    }
+  }
 })
-
-const channels = ref([
-  { id: 1, name: 'všeobecné', isPrivate: false, unreadCount: 0, isNewInvite: false, isAdmin: true },
-  { id: 2, name: 'random', isPrivate: false, unreadCount: 3, isNewInvite: false, isAdmin: false },
-  { id: 3, name: 'projekt-a', isPrivate: true, unreadCount: 0, isNewInvite: true, isAdmin: false }
-])
-
-const currentChannel = ref(channels.value[0])
-
-const members = ref([
-  { id: 1, nickName: 'JanNovak', firstName: 'Ján', lastName: 'Novák', status: 'online' },
-  { id: 2, nickName: 'Eva', firstName: 'Eva', lastName: 'Hrušková', status: 'dnd' },
-  { id: 3, nickName: 'Peter', firstName: 'Peter', lastName: 'Kovač', status: 'offline' }
-])
-
-const typingUsers = ref<string[]>([])
-
-const typingIndicatorText = computed(() => {
-  if (typingUsers.value.length === 0) return ''
-  if (typingUsers.value.length === 1) return `${typingUsers.value[0]} píše...`
-  if (typingUsers.value.length === 2) return `${typingUsers.value[0]} a ${typingUsers.value[1]} píšu...`
-  return `${typingUsers.value.length} ľudí píše...`
-})
-
-function selectChannel(channel: typeof channels.value[0]) {
-  currentChannel.value = channel
-  channel.unreadCount = 0
-  channel.isNewInvite = false
-}
-
-function setStatus(status: 'online' | 'dnd' | 'offline') {
-  userStatus.value = status
-  $q.notify({
-    type: 'info',
-    message: `Stav zmenený na ${status}`,
-    position: 'top',
-    timeout: 1500,
-    icon: status === 'online' ? 'circle' : status === 'dnd' ? 'do_not_disturb_on' : 'circle'
-  })
-}
-
-function getStatusColor(status: string) {
-  switch (status) {
-    case 'online': return 'positive'
-    case 'dnd': return 'warning'
-    case 'offline': return 'grey-5'
-    default: return 'grey'
-  }
-}
-
-function getStatusIcon(status: string) {
-  switch (status) {
-    case 'online': return 'circle'
-    case 'dnd': return 'do_not_disturb_on'
-    case 'offline': return 'circle'
-    default: return 'circle'
-  }
-}
-
-function createChannel() {
-  if (!newChannelName.value || newChannelName.value.length < 3) {
-    $q.notify({
-      type: 'warning',
-      message: 'Názov musí mať aspoň 3 znaky',
-      position: 'top'
-    })
-    return
-  }
-  
-  const newChannel = {
-    id: Date.now(),
-    name: newChannelName.value,
-    isPrivate: newChannelIsPrivate.value,
-    unreadCount: 0,
-    isNewInvite: false,
-    isAdmin: true
-  }
-  
-  channels.value.push(newChannel)
-  showCreateChannelDialog.value = false
-  newChannelName.value = ''
-  newChannelIsPrivate.value = false
-  
-  $q.notify({
-    type: 'positive',
-    message: `Kanál #${newChannel.name} bol vytvorený`,
-    position: 'top',
-    icon: 'check_circle',
-    actions: [
-      { label: 'Otvoriť', color: 'white', handler: () => selectChannel(newChannel) }
-    ]
-  })
-}
-
-function handleLogout() {
-  localStorage.removeItem('user')
-  void router.push('/auth')
-  $q.notify({
-    type: 'info',
-    message: 'Odhlásený',
-    position: 'top',
-    icon: 'logout'
-  })
-}
-
-function toggleDarkMode() {
-  $q.dark.toggle()
-  localStorage.setItem('darkMode', String($q.dark.isActive))
-}
-
 </script>
 
 <style scoped>
-/* Transition animations */
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.3s ease;
-}
-
-.list-enter-from {
-  opacity: 0;
-  transform: translateX(-30px);
-}
-
-.list-leave-to {
-  opacity: 0;
-  transform: translateX(30px);
-}
-
-.transition {
-  transition: all 0.2s ease;
+.bg-gradient {
+  background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-secondary) 100%);
 }
 </style>

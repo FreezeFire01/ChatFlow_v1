@@ -230,7 +230,6 @@ async function handleLogin() {
 async function handleRegister() {
   loading.value = true
   try {
-    // TODO: Connect to your AdonisJS backend
     // const response = await api.post('/register', registerForm.value)
     
     // Simulate API call

@@ -1,0 +1,102 @@
+{
+  "user": {
+    "id": 1,
+    "nickName": "TestUser",
+    "firstName": "Test",
+    "lastName": "User",
+    "email": "test@example.com",
+    "status": "online"
+  },
+  "channels": [
+    {
+      "id": 1,
+      "name": "general",
+      "isPrivate": false,
+      "adminId": 1,
+      "createdAt": "2025-01-01T09:00:00.000Z",
+      "lastActivityAt": "2025-01-01T09:05:00.000Z",
+      "members": [
+        {
+          "id": 1,
+          "nickName": "TestUser",
+          "firstName": "Test",
+          "lastName": "User",
+          "email": "test@example.com",
+          "status": "online"
+        },
+        {
+          "id": 2,
+          "nickName": "Eva",
+          "firstName": "Eva",
+          "lastName": "Nováková",
+          "email": "eva@example.com",
+          "status": "online"
+        },
+        {
+          "id": 3,
+          "nickName": "Peter",
+          "firstName": "Peter",
+          "lastName": "Horváth",
+          "email": "peter@example.com",
+          "status": "dnd"
+        }
+      ],
+      "messages": [
+        {
+          "id": 1001,
+          "channelId": 1,
+          "authorId": 2,
+          "author": "Eva",
+          "content": "Vitajte v kanáli #general! Ak niečo potrebujete, napíšte.",
+          "timestamp": "2025-01-01T09:02:00.000Z"
+        },
+        {
+          "id": 1002,
+          "channelId": 1,
+          "authorId": 3,
+          "author": "Peter",
+          "content": "@TestUser môžeš, prosím, skontrolovať nový dokument?",
+          "timestamp": "2025-01-01T09:04:30.000Z",
+          "mentionedUserIds": [1],
+          "mentionsMe": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "random",
+      "isPrivate": false,
+      "adminId": 1,
+      "createdAt": "2025-01-02T10:00:00.000Z",
+      "lastActivityAt": "2025-01-02T10:15:00.000Z",
+      "members": [
+        {
+          "id": 1,
+          "nickName": "TestUser",
+          "firstName": "Test",
+          "lastName": "User",
+          "email": "test@example.com",
+          "status": "online"
+        },
+        {
+          "id": 4,
+          "nickName": "Lukas",
+          "firstName": "Lukáš",
+          "lastName": "Kováč",
+          "email": "lukas@example.com",
+          "status": "offline"
+        }
+      ],
+      "messages": [
+        {
+          "id": 2001,
+          "channelId": 2,
+          "authorId": 4,
+          "author": "Lukas",
+          "content": "Sem môžeme hádzať všetky meme obrázky.",
+          "timestamp": "2025-01-02T10:05:00.000Z"
+        }
+      ]
+    }
+  ]
+}

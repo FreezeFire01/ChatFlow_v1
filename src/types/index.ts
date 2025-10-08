@@ -8,6 +8,7 @@ export interface User {
   status: UserStatus
   createdAt?: Date
   updatedAt?: Date
+  avatarUrl?: string
 }
 
 export type UserStatus = 'online' | 'dnd' | 'offline'
@@ -42,12 +43,28 @@ export interface Message {
   id: number
   channelId: number
   authorId: number
-  author: string // nickname for display
+  author: string
   content: string
   timestamp: Date
   mentionedUserIds?: number[]
   mentionsMe?: boolean
   editedAt?: Date
+}
+
+export interface MessageReaction {
+  emoji: string
+  userId: number
+}
+
+export interface MessageAttachment {
+  id: number | string
+  name: string
+}
+
+export type ChatMessage = Message & {
+  reactions?: MessageReaction[]
+  attachments?: MessageAttachment[]
+  mentions?: string[]
 }
 
 // Command Types
@@ -79,6 +96,7 @@ export interface TypingIndicator {
   userId: number
   nickName: string
   isTyping: boolean
+  messagePreview?: string
 }
 
 export interface Notification {

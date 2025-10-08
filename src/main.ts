@@ -6,6 +6,9 @@ import router from './router'
 
 // Import Quasar css
 import 'quasar/dist/quasar.css'
+import { initializeStaticData } from './utils/seedData'
+
+initializeStaticData()
 
 const app = createApp(App)
 
