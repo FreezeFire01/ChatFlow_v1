@@ -60,7 +60,8 @@
       v-model="leftDrawerOpen"
       show-if-above
       bordered
-      :width="300"
+      :width="drawerWidth"
+      :breakpoint="1024"
     >
       <channel-list
         :channels="channels"
@@ -77,7 +78,8 @@
       v-model="rightDrawerOpen"
       side="right"
       bordered
-      :width="300"
+      :width="drawerWidth"
+      :breakpoint="1024"
     >
       <member-list
         :members="members"
@@ -164,6 +166,25 @@ export default defineComponent({
     },
     totalMembers(): number {
       return this.members.length
+    },
+    drawerWidth(): number {
+      // Responsive drawer width based on window size
+      if (typeof window === 'undefined') return 300
+      const width = window.innerWidth
+      if (width >= 1920) return 320
+      if (width >= 1440) return 300
+      if (width >= 1024) return 280
+      if (width >= 768) return 260
+      return 240
+    },
+    breakpoint(): string {
+      if (typeof window === 'undefined') return 'desktop'
+      const width = window.innerWidth
+      if (width >= 1920) return 'xl'
+      if (width >= 1440) return 'lg'
+      if (width >= 1024) return 'md'
+      if (width >= 768) return 'sm'
+      return 'xs'
     }
   },
   watch: {
@@ -517,5 +538,61 @@ export default defineComponent({
 <style scoped>
 .bg-gradient {
   background: linear-gradient(135deg, var(--q-primary) 0%, var(--q-secondary) 100%);
+}
+
+/* Responsive header adjustments */
+@media (max-width: 767px) {
+  :deep(.q-toolbar) {
+    padding: 0 8px;
+    min-height: 48px;
+  }
+  
+  :deep(.q-toolbar__title) {
+    font-size: 16px;
+  }
+  
+  :deep(.q-btn) {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  
+  :deep(.q-icon) {
+    font-size: 20px;
+  }
+  
+  :deep(.q-badge) {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+}
+
+@media (max-width: 599px) {
+  :deep(.q-toolbar) {
+    min-height: 44px;
+  }
+  
+  :deep(.q-toolbar__title) {
+    font-size: 14px;
+  }
+  
+  :deep(.q-toolbar__title .q-badge) {
+    display: none;
+  }
+  
+  :deep(.q-btn) {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+/* Responsive drawer content */
+:deep(.q-drawer) {
+  transition: width 0.3s ease;
+}
+
+@media (max-width: 1023px) {
+  :deep(.q-drawer__content) {
+    padding: 8px;
+  }
 }
 </style>
