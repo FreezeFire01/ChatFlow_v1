@@ -259,10 +259,12 @@ export default defineComponent({
 <style scoped>
 .message-wrapper {
   transition: all 0.2s;
-  position: relative;
+  /* position: relative removed - causes issues with q-page contain */
   background: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.1);
   color: #1f2933;
+  padding: 8px;
+  margin-bottom: 8px;
 }
 
 .hover-effect:hover {
@@ -273,6 +275,7 @@ export default defineComponent({
 .message-actions {
   display: flex;
   gap: 4px;
+  flex-wrap: wrap;
 }
 
 .message-content {
@@ -280,6 +283,7 @@ export default defineComponent({
   line-height: 1.6;
   word-wrap: break-word;
   overflow-wrap: break-word;
+  overflow: hidden;
 }
 
 .message-content :deep(.inline-code) {
@@ -288,5 +292,35 @@ export default defineComponent({
   border-radius: 3px;
   font-family: monospace;
   font-size: 13px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 767px) {
+  .message-wrapper {
+    padding: 6px;
+  }
+  
+  .message-content {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  .message-actions {
+    gap: 2px;
+  }
+  
+  .message-actions :deep(.q-btn) {
+    padding: 4px;
+  }
+}
+
+@media (max-width: 599px) {
+  .message-content {
+    font-size: 13px;
+  }
+  
+  .message-content :deep(.inline-code) {
+    font-size: 12px;
+  }
 }
 </style>

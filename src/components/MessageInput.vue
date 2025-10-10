@@ -335,6 +335,41 @@ export default defineComponent({
 
 <style scoped>
 .message-input-wrapper {
-  border-top: 1px solid #e0e0e0;
+  background: white;
+}
+
+/* Responsive padding and sizing */
+@media (max-width: 767px) {
+  .message-input-wrapper :deep(.q-pa-md) {
+    padding: 12px;
+  }
+  
+  .message-input-wrapper :deep(.q-input) {
+    font-size: 14px;
+  }
+  
+  .message-input-wrapper :deep(.q-btn) {
+    min-width: 32px;
+    min-height: 32px;
+  }
+}
+
+@media (max-width: 599px) {
+  .message-input-wrapper :deep(.q-pa-md) {
+    padding: 8px;
+  }
+  
+  .message-input-wrapper :deep(.q-input) {
+    font-size: 13px;
+  }
+  
+  .message-input-wrapper :deep(.q-btn) {
+    min-width: 28px;
+    min-height: 28px;
+  }
+  
+  .message-input-wrapper :deep(.q-btn .q-icon) {
+    font-size: 18px;
+  }
 }
 </style>

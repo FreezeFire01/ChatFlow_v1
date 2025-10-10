@@ -1,92 +1,95 @@
 <template>
-  <q-page class="column no-wrap">
+  <q-page class="chat-page-container">
     <!-- Messages Area -->
     <q-scroll-area 
       ref="scrollArea"
-      class="col"
+      class="messages-scroll-area"
       @scroll="onScroll"
     >
-      <!-- Load More Button -->
-      <div 
-        v-if="hasMoreMessages" 
-        class="text-center q-pa-md"
-      >
-        <q-btn
-          flat
-          dense
-          label="Načítať staršie správy"
-          icon="expand_less"
-          color="primary"
-          :loading="loadingMore"
-          @click="loadMoreMessages"
-        />
-      </div>
-
-      <!-- Messages Container -->
-      <div class="q-pa-md">
-        <!-- Date Separators and Messages -->
-        <template v-for="(item, index) in messagesWithDates" :key="`item-${index}`">
-          <!-- Date Separator -->
-          <div 
-            v-if="item.type === 'date'" 
-            class="date-separator q-my-md"
-          >
-            <q-chip 
-              color="grey-4" 
-              text-color="grey-8" 
-              icon="event" 
-              square
-            >
-              {{ item.label }}
-            </q-chip>
-          </div>
-
-          <!-- Message Item -->
-          <message-item
-            v-else-if="item.type === 'message'"
-            :message="item.data"
-            :is-own="item.data.authorId === currentUserId"
-            :current-user-id="currentUserId"
-            @reply="handleReply"
-            @edit="handleEdit"
-            @delete="handleDelete"
-            @copy="handleCopy"
-          />
-        </template>
-
-        <!-- Empty State -->
+        <!-- Load More Button -->
         <div 
-          v-if="messages.length === 0 && !loading" 
-          class="text-center q-pa-xl"
+          v-if="hasMoreMessages" 
+          class="text-center q-pa-md"
         >
-          <q-icon name="forum" size="80px" color="grey-5" />
-          <div class="text-h6 text-grey-7 q-mt-md">Žiadne správy</div>
-          <div class="text-caption text-grey-6">Buď prvý, kto napíše správu!</div>
+          <q-btn
+            flat
+            dense
+            label="Načítať staršie správy"
+            icon="expand_less"
+            color="primary"
+            :loading="loadingMore"
+            @click="loadMoreMessages"
+          />
         </div>
-      </div>
+
+        <!-- Messages Container -->
+        <div class="messages-container q-pa-md">
+          <!-- Date Separators and Messages -->
+          <template v-for="(item, index) in messagesWithDates" :key="`item-${index}`">
+            <!-- Date Separator -->
+            <div 
+              v-if="item.type === 'date'" 
+              class="date-separator q-my-md"
+            >
+              <q-chip 
+                color="grey-4" 
+                text-color="grey-8" 
+                icon="event" 
+                square
+              >
+                {{ item.label }}
+              </q-chip>
+            </div>
+
+            <!-- Message Item -->
+            <message-item
+              v-else-if="item.type === 'message'"
+              :message="item.data"
+              :is-own="item.data.authorId === currentUserId"
+              :current-user-id="currentUserId"
+              @reply="handleReply"
+              @edit="handleEdit"
+              @delete="handleDelete"
+              @copy="handleCopy"
+            />
+          </template>
+
+          <!-- Empty State -->
+          <div 
+            v-if="messages.length === 0 && !loading" 
+            class="text-center q-pa-xl"
+          >
+            <q-icon name="forum" size="80px" color="grey-5" />
+            <div class="text-h6 text-grey-7 q-mt-md">Žiadne správy</div>
+            <div class="text-caption text-grey-6">Buď prvý, kto napíše správu!</div>
+          </div>
+        </div>
     </q-scroll-area>
 
-    <!-- Typing Indicator -->
-    <q-slide-transition>
-      <div 
-        v-if="typingUsers.length > 0" 
-        class="q-pa-sm bg-grey-2"
-      >
-        <div class="text-caption">
-          <q-icon name="edit" size="xs" class="q-mr-xs" />
-          {{ typingText }}
+    <!-- Bottom Section (Fixed) -->
+    <div class="bottom-section">
+      <!-- Typing Indicator -->
+      <q-slide-transition>
+        <div 
+          v-if="typingUsers.length > 0" 
+          class="typing-indicator-wrapper q-pa-sm bg-grey-2"
+        >
+          <div class="text-caption">
+            <q-icon name="edit" size="xs" class="q-mr-xs" />
+            {{ typingText }}
+          </div>
         </div>
-      </div>
-    </q-slide-transition>
+      </q-slide-transition>
 
-    <!-- Message Input -->
-    <message-input
-      :channel-id="channelId"
-      :members="members"
-      @message-sent="handleMessageSent"
-      @command-executed="handleCommand"
-      @typing="handleTyping"
-    />
+      <!-- Message Input -->
+      <message-input
+        :channel-id="channelId"
+        :members="members"
+        @message-sent="handleMessageSent"
+        @command-executed="handleCommand"
+        @typing="handleTyping"
+      />
+    </div>
 
     <!-- Scroll to Bottom FAB -->
     <q-page-sticky 
@@ -551,10 +554,158 @@ export default defineComponent({
 </script>
 
 <style scoped>
+/* Use Quasar's layout system - q-page automatically adjusts for drawers */
+.chat-page-container {
+  /* Override q-page's contain: strict to fix absolute positioning issues */
+  contain: none !important;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
+/* Scroll area takes remaining space */
+.messages-scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 0;
+  width: 100%;
+  position: relative;
+}
+
+/* Messages container - simple centered layout */
+.messages-container {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 24px 20px 24px;
+  box-sizing: border-box;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 1600px) {
+  .messages-container {
+    max-width: 1000px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .messages-container {
+    max-width: 900px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .messages-container {
+    max-width: 100%;
+    padding: 0 16px 20px 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  .messages-container {
+    padding: 0 12px 20px 12px;
+  }
+}
+
 .date-separator {
   display: flex;
   justify-content: center;
   align-items: center;
   margin: 24px 0;
+}
+
+/* Fixed bottom section for typing indicator and input */
+.bottom-section {
+  flex: 0 0 auto;
+  background: white;
+  z-index: 100;
+  border-top: 1px solid #e0e0e0;
+}
+
+.typing-indicator-wrapper {
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Responsive FAB button positioning */
+@media (max-width: 767px) {
+  :deep(.q-page-sticky) {
+    right: 12px !important;
+    bottom: 80px !important;
+  }
+  
+  :deep(.q-page-sticky .q-btn--fab) {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  
+  :deep(.q-page-sticky .q-icon) {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 599px) {
+  :deep(.q-page-sticky) {
+    right: 8px !important;
+    bottom: 75px !important;
+  }
+  
+  :deep(.q-page-sticky .q-btn--fab) {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+  
+  :deep(.q-page-sticky .q-icon) {
+    font-size: 20px;
+  }
+  
+  :deep(.q-page-sticky .q-badge) {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+}
+
+/* Responsive date separator */
+@media (max-width: 767px) {
+  .date-separator {
+    margin: 16px 0;
+  }
+  
+  .date-separator :deep(.q-chip) {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}
+
+/* Responsive empty state */
+@media (max-width: 767px) {
+  .text-center.q-pa-xl {
+    padding: 24px !important;
+  }
+  
+  .text-center.q-pa-xl :deep(.q-icon) {
+    font-size: 60px !important;
+  }
+  
+  .text-center.q-pa-xl .text-h6 {
+    font-size: 18px;
+  }
+}
+
+/* Responsive load more button */
+@media (max-width: 599px) {
+  .text-center.q-pa-md {
+    padding: 8px !important;
+  }
+  
+  .text-center.q-pa-md :deep(.q-btn) {
+    font-size: 12px;
+    padding: 4px 12px;
+  }
 }
 </style>
